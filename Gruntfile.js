@@ -2,18 +2,17 @@ module.exports = function(grunt) {
 
   "use strict";
 
-  grunt.initConfig({ 
-  
+  grunt.initConfig({
+
     libFiles: [
       "src/**/*.purs",
       "bower_components/purescript-*/src/**/*.purs",
-      "bower_components/purescript-*/src/**/*.purs.hs"
     ],
-    
+
     clean: {
-      lib: ["js", "externs"]
+      lib: ["output", "externs"]
     },
-  
+
     pscMake: {
       lib: {
         src: "<%=libFiles%>"
@@ -23,7 +22,7 @@ module.exports = function(grunt) {
 
   grunt.loadNpmTasks("grunt-contrib-clean");
   grunt.loadNpmTasks("grunt-purescript");
-  
+
   grunt.registerTask("lib", ["pscMake:lib"]);
   grunt.registerTask("default", ["lib"]);
 };
