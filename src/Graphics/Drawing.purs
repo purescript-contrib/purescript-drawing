@@ -7,7 +7,7 @@ module Graphics.Drawing
   , OutlineStyle, outlineColor, lineWidth
   , Shadow, shadowOffset, shadowBlur, shadowColor, shadow
   , Drawing, filled, outlined, clipped, scale, translate, rotate, text
-  , above, beside
+  , above, beside, shapeSize, drawingSize
   , everywhere
   , render
   , module Color
