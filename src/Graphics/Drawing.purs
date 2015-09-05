@@ -263,8 +263,6 @@ above a b =
      then Many (Cons (translate (c - sb.w) sa.h b) (Cons a Nil))
      else Many (Cons (translate 0.0 sa.h b) (Cons (translate (c - sa.w) 0.0 a) Nil))
 
-import Debug.Trace
-
 -- | Place a Drawing beside another.
 beside :: Drawing -> Drawing -> Drawing
 beside a b =
