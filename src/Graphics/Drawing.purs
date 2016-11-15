@@ -7,6 +7,7 @@ module Graphics.Drawing
   , OutlineStyle, outlineColor, lineWidth
   , Shadow, shadowOffset, shadowBlur, shadowColor, shadow
   , Drawing, filled, outlined, clipped, scale, translate, rotate, text
+  , above, beside, shapeSize, drawingSize
   , everywhere
   , render
   , module Color
@@ -34,33 +35,18 @@ type Point = { x :: Number, y :: Number }
 data Shape
   -- | A path is a list of points joined by line segments
   = Path Boolean (List Point)
-  -- | A rectangle consisting of the numbers left, top, width and height
-  | Rectangle { x :: Number, y :: Number, w :: Number, h :: Number }
-  -- | A circle consisting of the numbers center-x, center-y and radius
-  | Circle { x :: Number, y :: Number, r :: Number }
-  -- | A composite shape
-  | Composite (List Shape)
-
-instance semigroupShape :: Semigroup Shape where
-  append (Composite ds) d = Composite (ds <> singleton d)
-  append d (Composite ds) = Composite (d : ds)
-  append d1 d2 = Composite (Cons d1 (Cons d2 Nil))
-
-instance monoidShape :: Monoid Shape where
-  mempty = Composite mempty
+  -- | A rectangle consisting of width and height
+  | Rectangle { w :: Number, h :: Number }
+  -- | A circle consisting of its radius
+  | Circle { r :: Number }
 
 instance eqShape :: Eq Shape where
   eq (Path a b) (Path a' b') = a == a'
                             && map _.x b == map _.x b'
                             && map _.y b == map _.y b'
-  eq (Rectangle a) (Rectangle a') = a.x == a'.x
-                                 && a.y == a'.y
-                                 && a.w == a'.w
+  eq (Rectangle a) (Rectangle a') = a.w == a'.w
                                  && a.h == a'.h
-  eq (Circle a) (Circle a') = a.x == a'.x
-                           && a.y == a'.y
-                           && a.r == a'.r
-  eq (Composite a) (Composite a') = a == a'
+  eq (Circle a) (Circle a') = a.r == a'.r
   eq _ _ = false
 
 -- | Create a path.
@@ -71,13 +57,20 @@ path = Path false <<< fromFoldable
 closed :: forall f. (Foldable f) => f Point -> Shape
 closed = Path true <<< fromFoldable
 
--- | Create a rectangle from the left, top, width and height parameters.
-rectangle :: Number -> Number -> Number -> Number -> Shape
-rectangle x y w h = Rectangle { x: x, y: y, w: w, h: h }
+-- | Create a rectangle from the width and height parameters.
+rectangle :: Number -> Number -> Shape
+rectangle w h = Rectangle { w: w, h: h }
 
--- | Create a circle from the left, top and radius parameters.
-circle :: Number -> Number -> Number -> Shape
-circle x y r = Circle { x: x, y: y, r: r }
+-- | Create a circle from its radius.
+circle :: Number -> Shape
+circle r = Circle { r: r }
+
+-- | Get the width and height of a Shape
+shapeSize :: Shape -> { w :: Number, h :: Number }
+shapeSize (Path _ points) =
+  { w: foldr max 0.0 $ map _.x points, h: foldr max 0.0 $ map _.y points }
+shapeSize (Rectangle a) = a
+shapeSize (Circle a) = { w: 2.0 * a.r, h: 2.0 * a.r }
 
 -- | Encapsulates fill color etc.
 newtype FillStyle = FillStyle
@@ -242,6 +235,44 @@ rotate = Rotate
 text :: Font -> Number -> Number -> FillStyle -> String -> Drawing
 text = Text
 
+-- | Get the size of a Drawing.
+drawingSize :: Drawing -> { w:: Number, h:: Number }
+drawingSize (Fill shape _) = shapeSize shape
+drawingSize (Outline shape (OutlineStyle oStyle)) = shapeSize shape -- TODO
+drawingSize (Text font x y fillStyle string) = { w: 0.0, h: 0.0} -- TODO
+drawingSize (Many ds) =
+  let sizes = map drawingSize ds
+  in { w: foldr max 0.0 $ map _.w sizes, h: foldr max 0.0 $ map _.h sizes }
+drawingSize (Scale s d) =
+  let sz = drawingSize d
+  in { w: sz.w * s.scaleX, h: sz.h * s.scaleY }
+drawingSize (Translate t d) =
+  let sz = drawingSize d
+  in { w: sz.w + t.translateX, h: sz.h + t.translateY }
+drawingSize (Rotate angle d) = drawingSize d -- TODO
+drawingSize (Clipped shape d) = drawingSize d -- TODO
+drawingSize (WithShadow shadow d) = drawingSize d -- TODO
+
+-- | Place a Drawing above another.
+above :: Drawing -> Drawing -> Drawing
+above a b =
+  let sa = drawingSize a
+      sb = drawingSize b
+      c = (sa.w + sb.w) / 2.0
+  in if sa.w > sb.w
+     then Many (Cons (translate (c - sb.w) sa.h b) (Cons a Nil))
+     else Many (Cons (translate 0.0 sa.h b) (Cons (translate (c - sa.w) 0.0 a) Nil))
+
+-- | Place a Drawing beside another.
+beside :: Drawing -> Drawing -> Drawing
+beside a b =
+  let sa = drawingSize a
+      sb = drawingSize b
+      c = (sa.h + sb.h) / 2.0
+  in if sa.h > sb.h
+     then Many (Cons (translate sa.w (c - sb.h) b) (Cons a Nil))
+     else Many (Cons (translate sa.w 0.0 b) (Cons (translate 0.0 (c - sa.h) a) Nil))
+
 -- | Modify a `Drawing` by applying a transformation to every subdrawing.
 everywhere :: (Drawing -> Drawing) -> Drawing -> Drawing
 everywhere f = go
@@ -311,6 +342,5 @@ render ctx = go
     Canvas.moveTo ctx p.x p.y
     for_ rest \p -> Canvas.lineTo ctx p.x p.y
     when cl $ void $ Canvas.closePath ctx
-  renderShape (Rectangle r) = void $ Canvas.rect ctx r
-  renderShape (Circle c) = void $ Canvas.arc ctx { x: c.x, y: c.y, r: c.r, start: 0.0, end: pi * 2.0 }
-  renderShape (Composite ds) = for_ ds renderShape
+  renderShape (Rectangle r) = void $ Canvas.rect ctx { x: 0.0, y: 0.0, w: r.w, h: r.h }
+  renderShape (Circle c) = void $ Canvas.arc ctx { x: c.r, y: c.r, r: c.r, start: 0.0, end: pi * 2.0 }

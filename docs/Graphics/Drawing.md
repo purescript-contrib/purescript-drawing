@@ -20,8 +20,6 @@ A single shape.
 
 ##### Instances
 ``` purescript
-Semigroup Shape
-Monoid Shape
 Eq Shape
 ```
 
@@ -44,18 +42,18 @@ Create a _closed_ path.
 #### `rectangle`
 
 ``` purescript
-rectangle :: Number -> Number -> Number -> Number -> Shape
+rectangle :: Number -> Number -> Shape
 ```
 
-Create a rectangle from the left, top, width and height parameters.
+Create a rectangle from the width and height parameters.
 
 #### `circle`
 
 ``` purescript
-circle :: Number -> Number -> Number -> Shape
+circle :: Number -> Shape
 ```
 
-Create a circle from the left, top and radius parameters.
+Create a circle from its radius.
 
 #### `FillStyle`
 
@@ -228,6 +226,22 @@ text :: Font -> Number -> Number -> FillStyle -> String -> Drawing
 ```
 
 Render some text.
+
+#### `above`
+
+``` purescript
+above :: Drawing -> Drawing -> Drawing
+```
+
+Place a Drawing above another.
+
+#### `beside`
+
+``` purescript
+beside :: Drawing -> Drawing -> Drawing
+```
+
+Place a Drawing beside another.
 
 #### `everywhere`
 
