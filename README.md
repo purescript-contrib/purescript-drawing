@@ -7,7 +7,7 @@
 Functional rendering using PureScript and HTML 5 Canvas
 
 - [Module Documentation](generated-docs/Graphics/Drawing.md)
-- [Example](test/Main.purs)
+- [Example](example/Main.purs)
 
 Run the example with `npm run example`.
 
