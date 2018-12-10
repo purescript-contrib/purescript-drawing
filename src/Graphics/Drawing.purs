@@ -132,7 +132,7 @@ shadowColor c = Shadow { color: Just c, blur: Nothing, offset: Nothing }
 shadowBlur :: Number -> Shadow
 shadowBlur b = Shadow { color: Nothing, blur: Just b, offset: Nothing }
 
--- | Set the shadow blur.
+-- | Set the shadow offset.
 shadowOffset :: Number -> Number -> Shadow
 shadowOffset x y = Shadow { color: Nothing, blur: Nothing, offset: Just { x: x, y: y } }
 
