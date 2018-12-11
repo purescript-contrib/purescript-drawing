@@ -6,7 +6,7 @@ module Graphics.Drawing
   , FillStyle, fillColor
   , OutlineStyle, outlineColor, lineWidth
   , Shadow, shadowOffset, shadowBlur, shadowColor, shadow
-  , Drawing, filled, outlined, clipped, scale, translate, rotate, text
+  , Drawing, filled, outlined, clipped, scale, translate, rotate, text, image
   , everywhere
   , render
   , module Color
@@ -205,6 +205,9 @@ rotate = Rotate
 -- | Render some text.
 text :: Font -> Number -> Number -> FillStyle -> String -> Drawing
 text = Text
+
+image :: Canvas.CanvasImageSource -> Drawing
+image = Image
 
 -- | Modify a `Drawing` by applying a transformation to every subdrawing.
 everywhere :: (Drawing -> Drawing) -> Drawing -> Drawing
