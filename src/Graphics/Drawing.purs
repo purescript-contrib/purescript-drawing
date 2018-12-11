@@ -2,7 +2,7 @@
 
 module Graphics.Drawing
   ( Point
-  , Shape, path, closed, rectangle, circle, arc
+  , Shape, path, closed, rectangle, circle, arc, svgPath
   , FillStyle, fillColor
   , OutlineStyle, outlineColor, lineWidth
   , Shadow, shadowOffset, shadowBlur, shadowColor, shadow
@@ -34,6 +34,8 @@ type Point = { x :: Number, y :: Number }
 data Shape
   -- | A path is a list of points joined by line segments
   = Path Boolean (List Point)
+  -- | An SVG path command https://developer.mozilla.org/en-US/docs/Web/SVG/Tutorial/Paths#Line_commands
+  | SVGPath String
   -- | A rectangle consisting of the numbers left, top, width and height
   | Rectangle Canvas.Rectangle
   -- | A circular arc consisting of the numbers center-x, center-y, start angle, end angle and radius
@@ -50,6 +52,9 @@ instance semigroupShape :: Semigroup Shape where
 
 instance monoidShape :: Monoid Shape where
   mempty = Composite mempty
+
+svgPath :: String -> Shape
+svgPath = SVGPath
 
 -- | Create a path.
 path :: forall f. (Foldable f) => f Point -> Shape
@@ -159,6 +164,7 @@ data Drawing
   | Rotate Number Drawing
   | Clipped Shape Drawing
   | WithShadow Shadow Drawing
+  | Image Canvas.CanvasImageSource
 
 instance semigroupDrawing :: Semigroup Drawing where
   append (Many ds) d = Many (ds <> singleton d)
@@ -167,8 +173,6 @@ instance semigroupDrawing :: Semigroup Drawing where
 
 instance monoidDrawing :: Monoid Drawing where
   mempty = Many mempty
-
-derive instance eqDrawing :: Eq Drawing
 
 -- | Fill a `Shape`.
 filled :: FillStyle -> Shape -> Drawing
@@ -220,12 +224,10 @@ render ctx = go
   where
   go (Fill sh style) = void $ Canvas.withContext ctx do
     applyFillStyle style
-    Canvas.fillPath ctx $
-      renderShape sh
+    renderShape true sh
   go (Outline sh style) = void $ Canvas.withContext ctx do
     applyOutlineStyle style
-    Canvas.strokePath ctx $
-      renderShape sh
+    renderShape false sh
   go (Many ds) = for_ ds go
   go (Scale s d) = void $ Canvas.withContext ctx do
     _ <- Canvas.scale ctx s
@@ -237,7 +239,7 @@ render ctx = go
     _ <- Canvas.rotate ctx r
     go d
   go (Clipped sh d) = void $ Canvas.withContext ctx do
-    renderShape sh
+    renderShape true sh -- FIXME incorrect fill
     _ <- Canvas.clip ctx
     go d
   go (WithShadow sh d) = void $ Canvas.withContext ctx do
@@ -247,6 +249,7 @@ render ctx = go
     _ <- Canvas.setFont ctx (fontString font)
     applyFillStyle style
     Canvas.fillText ctx s x y
+  go (Image s) = void $ Canvas.withContext ctx (Canvas.drawImage ctx s 0.0 0.0)
 
   applyShadow :: Shadow -> Effect Unit
   applyShadow (Shadow s) = do
@@ -265,12 +268,21 @@ render ctx = go
     for_ fs.color $ \color -> Canvas.setStrokeStyle ctx (cssStringHSLA color)
     for_ fs.lineWidth $ \width -> Canvas.setLineWidth ctx width
 
-  renderShape :: Shape -> Effect Unit
-  renderShape (Path _ Nil) = pure unit
-  renderShape (Path cl (Cons p rest)) = do
+  renderShape :: Boolean -> Shape -> Effect Unit
+  renderShape _ (Path _ Nil) = pure unit
+  renderShape fill (Path cl (Cons p rest)) =
+    (if fill then
+      Canvas.fillPath ctx
+    else
+      Canvas.strokePath ctx) do
     _ <- Canvas.moveTo ctx p.x p.y
     for_ rest \pt -> Canvas.lineTo ctx pt.x pt.y
     when cl $ void $ Canvas.closePath ctx
-  renderShape (Rectangle r) = void $ Canvas.rect ctx r
-  renderShape (Arc a) = void $ Canvas.arc ctx a
-  renderShape (Composite ds) = for_ ds renderShape
+  renderShape fill (SVGPath p) = (if fill then Canvas.fillSVGPath else Canvas.strokeSVGPath) ctx p
+  renderShape fill (Rectangle r) = do
+    Canvas.rect ctx r
+    (if fill then Canvas.fill else Canvas.stroke) ctx
+  renderShape fill (Arc a) = do
+    Canvas.arc ctx a
+    (if fill then Canvas.fill else Canvas.stroke) ctx
+  renderShape fill (Composite ds) = for_ ds (renderShape fill)

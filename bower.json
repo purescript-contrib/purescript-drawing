@@ -3,6 +3,7 @@
   "authors": [
     "Phil Freeman <paf31@cantab.net>"
   ],
+  "version": "4.0.1",
   "license": "MIT",
   "ignore": [
     "**/.*",
@@ -16,7 +17,7 @@
     "url": "git://github.com/paf31/purescript-drawing.git"
   },
   "dependencies": {
-    "purescript-canvas": "^4.0.0",
+    "purescript-canvas": "/k/gits/purescript-canvas#4.0.1",
     "purescript-lists": "^5.0.0",
     "purescript-math": "^2.1.1",
     "purescript-integers": "^4.0.0",
